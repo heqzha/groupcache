@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package groupcache
+package dcache
 
 import (
 	"errors"
@@ -40,12 +40,6 @@ type Sink interface {
 
 	// view returns a frozen view of the bytes for caching.
 	view() (ByteView, error)
-}
-
-func cloneBytes(b []byte) []byte {
-	c := make([]byte, len(b))
-	copy(c, b)
-	return c
 }
 
 func setSinkView(s Sink, v ByteView) error {

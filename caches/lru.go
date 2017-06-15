@@ -1,26 +1,9 @@
-/*
-Copyright 2013 Google Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-// Package lru implements an LRU cache.
-package lru
+package caches
 
 import "container/list"
 
 // Cache is an LRU cache. It is not safe for concurrent access.
-type Cache struct {
+type LRUCache struct {
 	// MaxEntries is the maximum number of cache entries before
 	// an item is evicted. Zero means no limit.
 	MaxEntries int
@@ -33,9 +16,6 @@ type Cache struct {
 	cache map[interface{}]*list.Element
 }
 
-// A Key may be any value that is comparable. See http://golang.org/ref/spec#Comparison_operators
-type Key interface{}
-
 type entry struct {
 	key   Key
 	value interface{}
@@ -44,8 +24,8 @@ type entry struct {
 // New creates a new Cache.
 // If maxEntries is zero, the cache has no limit and it's assumed
 // that eviction is done by the caller.
-func New(maxEntries int) *Cache {
-	return &Cache{
+func New(maxEntries int) *LRUCache {
+	return &LRUCache{
 		MaxEntries: maxEntries,
 		ll:         list.New(),
 		cache:      make(map[interface{}]*list.Element),
@@ -53,7 +33,7 @@ func New(maxEntries int) *Cache {
 }
 
 // Add adds a value to the cache.
-func (c *Cache) Add(key Key, value interface{}) {
+func (c *LRUCache) Add(key Key, value interface{}) {
 	if c.cache == nil {
 		c.cache = make(map[interface{}]*list.Element)
 		c.ll = list.New()
@@ -71,7 +51,7 @@ func (c *Cache) Add(key Key, value interface{}) {
 }
 
 // Get looks up a key's value from the cache.
-func (c *Cache) Get(key Key) (value interface{}, ok bool) {
+func (c *LRUCache) Get(key Key) (value interface{}, ok bool) {
 	if c.cache == nil {
 		return
 	}
@@ -83,7 +63,7 @@ func (c *Cache) Get(key Key) (value interface{}, ok bool) {
 }
 
 // Remove removes the provided key from the cache.
-func (c *Cache) Remove(key Key) {
+func (c *LRUCache) Remove(key Key) {
 	if c.cache == nil {
 		return
 	}
@@ -93,7 +73,7 @@ func (c *Cache) Remove(key Key) {
 }
 
 // RemoveOldest removes the oldest item from the cache.
-func (c *Cache) RemoveOldest() {
+func (c *LRUCache) RemoveOldest() {
 	if c.cache == nil {
 		return
 	}
@@ -103,7 +83,7 @@ func (c *Cache) RemoveOldest() {
 	}
 }
 
-func (c *Cache) removeElement(e *list.Element) {
+func (c *LRUCache) removeElement(e *list.Element) {
 	c.ll.Remove(e)
 	kv := e.Value.(*entry)
 	delete(c.cache, kv.key)
@@ -113,7 +93,7 @@ func (c *Cache) removeElement(e *list.Element) {
 }
 
 // Len returns the number of items in the cache.
-func (c *Cache) Len() int {
+func (c *LRUCache) Len() int {
 	if c.cache == nil {
 		return 0
 	}
@@ -121,7 +101,7 @@ func (c *Cache) Len() int {
 }
 
 // Clear purges all stored items from the cache.
-func (c *Cache) Clear() {
+func (c *LRUCache) Clear() {
 	if c.OnEvicted != nil {
 		for _, e := range c.cache {
 			kv := e.Value.(*entry)

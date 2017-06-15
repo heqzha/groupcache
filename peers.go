@@ -16,20 +16,22 @@ limitations under the License.
 
 // peers.go defines how processes find and communicate with their peers.
 
-package groupcache
+package dcache
 
 import (
-	pb "github.com/golang/groupcache/groupcachepb"
+	pb "github.com/heqzha/dcache/dcachepb"
 )
 
 // Context is an opaque value passed through calls to the
-// ProtoGetter. It may be nil if your ProtoGetter implementation does
+// ProtoHandler. It may be nil if your ProtoHandler implementation does
 // not require a context.
 type Context interface{}
 
-// ProtoGetter is the interface that must be implemented by a peer.
-type ProtoGetter interface {
+// ProtoHandler is the interface that must be implemented by a peer.
+type ProtoHandler interface {
 	Get(context Context, in *pb.GetRequest, out *pb.GetResponse) error
+	Set(context Context, in *pb.SetRequest, out *pb.SetResponse) error
+	Del(context Context, in *pb.DelRequest, out *pb.DelResponse) error
 }
 
 // PeerPicker is the interface that must be implemented to locate
@@ -38,13 +40,13 @@ type PeerPicker interface {
 	// PickPeer returns the peer that owns the specific key
 	// and true to indicate that a remote peer was nominated.
 	// It returns nil, false if the key owner is the current peer.
-	PickPeer(key string) (peer ProtoGetter, ok bool)
+	PickPeer(key string) (peer ProtoHandler, ok bool)
 }
 
 // NoPeers is an implementation of PeerPicker that never finds a peer.
 type NoPeers struct{}
 
-func (NoPeers) PickPeer(key string) (peer ProtoGetter, ok bool) { return }
+func (NoPeers) PickPeer(key string) (peer ProtoHandler, ok bool) { return }
 
 var (
 	portPicker func(groupName string) PeerPicker

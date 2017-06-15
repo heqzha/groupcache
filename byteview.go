@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package groupcache
+package dcache
 
 import (
 	"bytes"
@@ -22,6 +22,12 @@ import (
 	"io"
 	"strings"
 )
+
+func cloneBytes(b []byte) []byte {
+	c := make([]byte, len(b))
+	copy(c, b)
+	return c
+}
 
 // A ByteView holds an immutable view of bytes.
 // Internally it wraps either a []byte or a string,

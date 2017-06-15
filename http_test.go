@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package groupcache
+package dcache
 
 import (
 	"errors"
@@ -82,23 +82,47 @@ func TestHTTPPool(t *testing.T) {
 	p := NewHTTPPool("should-be-ignored")
 	p.Set(addrToURL(childAddr)...)
 
-	// Dummy getter function. Gets should go to children only.
+	// Dummy handler functions. Gets should go to children only.
 	// The only time this process will handle a get is when the
 	// children can't be contacted for some reason.
-	getter := GetterFunc(func(ctx Context, key string, dest Sink) error {
-		return errors.New("parent getter called; something's wrong")
-	})
-	g := NewGroup("httpPoolTest", 1<<20, getter)
+	handler := HandlerFuncs{
+		Getter: func(ctx Context, key string, dest Sink) error {
+			return errors.New("parent getter called; something's wrong")
+		},
+		Setter: func(ctx Context, key string, dest Sink) error {
+			return errors.New("parent setter called; something's wrong")
+		},
+		Deller: func(ctx Context, key string, dest Sink) error {
+			return errors.New("parent deller called; something's wrong")
+		},
+	}
 
-	for _, key := range testKeys(nGets) {
-		var value string
-		if err := g.Get(nil, key, StringSink(&value)); err != nil {
+	g := NewGroup("httpPoolTest", 1<<20, handler)
+
+	for idx, key := range testKeys(nGets) {
+		value := strconv.Itoa(idx)
+		if err := g.Set(nil, key, StringSink(&value)); err != nil {
 			t.Fatal(err)
 		}
-		if suffix := ":" + key; !strings.HasSuffix(value, suffix) {
-			t.Errorf("Get(%q) = %q, want value ending in %q", key, value, suffix)
+		t.Logf("Set key=%q, value=%q (peer:key)", key, value)
+
+		var getv string
+		if err := g.Get(nil, key, StringSink(&getv)); err != nil {
+			t.Fatal(err)
 		}
-		t.Logf("Get key=%q, value=%q (peer:key)", key, value)
+		if suffix := ":" + key; !strings.HasSuffix(getv, suffix) {
+			t.Errorf("Get(%q) = %q, want value ending in %q", key, getv, suffix)
+		}
+		t.Logf("Get key=%q, value=%q (peer:key)", key, getv)
+
+		var delv string
+		if err := g.Del(nil, key, StringSink(&delv)); err != nil {
+			t.Fatal(err)
+		}
+		if suffix := ":" + key; !strings.HasSuffix(delv, suffix) {
+			t.Errorf("Del(%q) = %q, want value ending in %q", key, delv, suffix)
+		}
+		t.Logf("Set key=%q, value=%q (peer:key)", key, value)
 	}
 }
 
@@ -116,11 +140,22 @@ func beChildForTestHTTPPool() {
 	p := NewHTTPPool("http://" + addrs[*peerIndex])
 	p.Set(addrToURL(addrs)...)
 
-	getter := GetterFunc(func(ctx Context, key string, dest Sink) error {
-		dest.SetString(strconv.Itoa(*peerIndex) + ":" + key)
-		return nil
-	})
-	NewGroup("httpPoolTest", 1<<20, getter)
+	handler := HandlerFuncs{
+		Getter: func(ctx Context, key string, dest Sink) error {
+			dest.SetString(strconv.Itoa(*peerIndex) + ":" + key)
+			return nil
+		},
+		Setter: func(ctx Context, key string, dest Sink) error {
+			dest.SetString(strconv.Itoa(*peerIndex) + ":" + key)
+			return nil
+		},
+		Deller: func(ctx Context, key string, dest Sink) error {
+			dest.SetString(strconv.Itoa(*peerIndex) + ":" + key)
+			return nil
+		},
+	}
+
+	NewGroup("httpPoolTest", 1<<20, handler)
 
 	log.Fatal(http.ListenAndServe(addrs[*peerIndex], p))
 }

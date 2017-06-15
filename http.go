@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package groupcache
+package dcache
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/consistenthash"
-	pb "github.com/golang/groupcache/groupcachepb"
 	"github.com/golang/protobuf/proto"
+	pb "github.com/heqzha/dcache/dcachepb"
 )
 
 const defaultBasePath = "/_groupcache/"
@@ -52,9 +52,9 @@ type HTTPPool struct {
 	// opts specifies the options.
 	opts HTTPPoolOptions
 
-	mu          sync.Mutex // guards peers and httpGetters
-	peers       *consistenthash.Map
-	httpGetters map[string]*httpGetter // keyed by e.g. "http://10.0.0.2:8008"
+	mu           sync.Mutex // guards peers and httpHandlers
+	peers        *consistenthash.Map
+	httpHandlers map[string]*httpHandler // keyed by e.g. "http://10.0.0.2:8008"
 }
 
 // HTTPPoolOptions are the configurations of a HTTPPool.
@@ -94,8 +94,8 @@ func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
 	httpPoolMade = true
 
 	p := &HTTPPool{
-		self:        self,
-		httpGetters: make(map[string]*httpGetter),
+		self:         self,
+		httpHandlers: make(map[string]*httpHandler),
 	}
 	if o != nil {
 		p.opts = *o
@@ -120,20 +120,20 @@ func (p *HTTPPool) Set(peers ...string) {
 	defer p.mu.Unlock()
 	p.peers = consistenthash.New(p.opts.Replicas, p.opts.HashFn)
 	p.peers.Add(peers...)
-	p.httpGetters = make(map[string]*httpGetter, len(peers))
+	p.httpHandlers = make(map[string]*httpHandler, len(peers))
 	for _, peer := range peers {
-		p.httpGetters[peer] = &httpGetter{transport: p.Transport, baseURL: peer + p.opts.BasePath}
+		p.httpHandlers[peer] = &httpHandler{transport: p.Transport, baseURL: peer + p.opts.BasePath}
 	}
 }
 
-func (p *HTTPPool) PickPeer(key string) (ProtoGetter, bool) {
+func (p *HTTPPool) PickPeer(key string) (ProtoHandler, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.peers.IsEmpty() {
 		return nil, false
 	}
 	if peer := p.peers.Get(key); peer != p.self {
-		return p.httpGetters[peer], true
+		return p.httpHandlers[peer], true
 	}
 	return nil, false
 }
@@ -180,7 +180,7 @@ func (p *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-type httpGetter struct {
+type httpHandler struct {
 	transport func(Context) http.RoundTripper
 	baseURL   string
 }
@@ -189,7 +189,7 @@ var bufferPool = sync.Pool{
 	New: func() interface{} { return new(bytes.Buffer) },
 }
 
-func (h *httpGetter) Get(context Context, in *pb.GetRequest, out *pb.GetResponse) error {
+func (h *httpHandler) Get(context Context, in *pb.GetRequest, out *pb.GetResponse) error {
 	u := fmt.Sprintf(
 		"%v%v/%v",
 		h.baseURL,
@@ -197,6 +197,81 @@ func (h *httpGetter) Get(context Context, in *pb.GetRequest, out *pb.GetResponse
 		url.QueryEscape(in.GetKey()),
 	)
 	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return err
+	}
+	tr := http.DefaultTransport
+	if h.transport != nil {
+		tr = h.transport(context)
+	}
+	res, err := tr.RoundTrip(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned: %v", res.Status)
+	}
+	b := bufferPool.Get().(*bytes.Buffer)
+	b.Reset()
+	defer bufferPool.Put(b)
+	_, err = io.Copy(b, res.Body)
+	if err != nil {
+		return fmt.Errorf("reading response body: %v", err)
+	}
+	err = proto.Unmarshal(b.Bytes(), out)
+	if err != nil {
+		return fmt.Errorf("decoding response body: %v", err)
+	}
+	return nil
+}
+
+func (h *httpHandler) Set(context Context, in *pb.SetRequest, out *pb.SetResponse) error {
+	u := fmt.Sprintf(
+		"%v%v/%v",
+		h.baseURL,
+		url.QueryEscape(in.GetGroup()),
+		url.QueryEscape(in.GetKey()),
+	)
+	body := bytes.NewReader(in.GetValue())
+	req, err := http.NewRequest("POST", u, body)
+	if err != nil {
+		return err
+	}
+	tr := http.DefaultTransport
+	if h.transport != nil {
+		tr = h.transport(context)
+	}
+	res, err := tr.RoundTrip(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned: %v", res.Status)
+	}
+	b := bufferPool.Get().(*bytes.Buffer)
+	b.Reset()
+	defer bufferPool.Put(b)
+	_, err = io.Copy(b, res.Body)
+	if err != nil {
+		return fmt.Errorf("reading response body: %v", err)
+	}
+	err = proto.Unmarshal(b.Bytes(), out)
+	if err != nil {
+		return fmt.Errorf("decoding response body: %v", err)
+	}
+	return nil
+}
+
+func (h *httpHandler) Del(context Context, in *pb.DelRequest, out *pb.DelResponse) error {
+	u := fmt.Sprintf(
+		"%v%v/%v",
+		h.baseURL,
+		url.QueryEscape(in.GetGroup()),
+		url.QueryEscape(in.GetKey()),
+	)
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return err
 	}

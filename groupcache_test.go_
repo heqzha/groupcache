@@ -16,7 +16,7 @@ limitations under the License.
 
 // Tests for groupcache.
 
-package groupcache
+package dcache
 
 import (
 	"errors"
