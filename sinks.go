@@ -30,13 +30,19 @@ type Sink interface {
 	// SetString sets the value to s.
 	SetString(s string) error
 
+	GetString() (string, error)
+
 	// SetBytes sets the value to the contents of v.
 	// The caller retains ownership of v.
 	SetBytes(v []byte) error
 
+	GetBytes() ([]byte, error)
+
 	// SetProto sets the value to the encoded version of m.
 	// The caller retains ownership of m.
 	SetProto(m proto.Message) error
+
+	GetProto(m proto.Message) error
 
 	// view returns a frozen view of the bytes for caching.
 	view() (ByteView, error)
@@ -82,8 +88,16 @@ func (s *stringSink) SetString(v string) error {
 	return nil
 }
 
+func (s *stringSink) GetString() (string, error) {
+	return *s.sp, nil
+}
+
 func (s *stringSink) SetBytes(v []byte) error {
 	return s.SetString(string(v))
+}
+
+func (s *stringSink) GetBytes() ([]byte, error) {
+	return []byte(*s.sp), nil
 }
 
 func (s *stringSink) SetProto(m proto.Message) error {
@@ -94,6 +108,14 @@ func (s *stringSink) SetProto(m proto.Message) error {
 	s.v.b = b
 	*s.sp = string(b)
 	return nil
+}
+
+func (s *stringSink) GetProto(m proto.Message) error {
+	b, err := s.GetBytes()
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(b, m)
 }
 
 // ByteViewSink returns a Sink that populates a ByteView.
@@ -135,14 +157,30 @@ func (s *byteViewSink) SetProto(m proto.Message) error {
 	return nil
 }
 
+func (s *byteViewSink) GetProto(m proto.Message) error {
+	b, err := s.GetBytes()
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(b, m)
+}
+
 func (s *byteViewSink) SetBytes(b []byte) error {
 	*s.dst = ByteView{b: cloneBytes(b)}
 	return nil
 }
 
+func (s *byteViewSink) GetBytes() ([]byte, error) {
+	return []byte(s.dst.s), nil
+}
+
 func (s *byteViewSink) SetString(v string) error {
 	*s.dst = ByteView{s: v}
 	return nil
+}
+
+func (s *byteViewSink) GetString() (string, error) {
+	return s.dst.s, nil
 }
 
 // ProtoSink returns a sink that unmarshals binary proto values into m.
@@ -173,6 +211,14 @@ func (s *protoSink) SetBytes(b []byte) error {
 	return nil
 }
 
+func (s *protoSink) GetBytes() ([]byte, error) {
+	b, err := proto.Marshal(s.dst)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func (s *protoSink) SetString(v string) error {
 	b := []byte(v)
 	err := proto.Unmarshal(b, s.dst)
@@ -182,6 +228,14 @@ func (s *protoSink) SetString(v string) error {
 	s.v.b = b
 	s.v.s = ""
 	return nil
+}
+
+func (s *protoSink) GetString() (string, error) {
+	b, err := s.GetBytes()
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func (s *protoSink) SetProto(m proto.Message) error {
@@ -200,6 +254,14 @@ func (s *protoSink) SetProto(m proto.Message) error {
 	s.v.b = b
 	s.v.s = ""
 	return nil
+}
+
+func (s *protoSink) GetProto(m proto.Message) error {
+	b, err := proto.Marshal(s.dst)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(b, m)
 }
 
 // AllocatingByteSliceSink returns a Sink that allocates
@@ -236,8 +298,16 @@ func (s *allocBytesSink) SetProto(m proto.Message) error {
 	return s.setBytesOwned(b)
 }
 
+func (s *allocBytesSink) GetProto(m proto.Message) error {
+	return proto.Unmarshal(*s.dst, m)
+}
+
 func (s *allocBytesSink) SetBytes(b []byte) error {
 	return s.setBytesOwned(cloneBytes(b))
+}
+
+func (s *allocBytesSink) GetBytes() ([]byte, error) {
+	return *s.dst, nil
 }
 
 func (s *allocBytesSink) setBytesOwned(b []byte) error {
@@ -258,6 +328,14 @@ func (s *allocBytesSink) SetString(v string) error {
 	s.v.b = nil
 	s.v.s = v
 	return nil
+}
+
+func (s *allocBytesSink) GetString() (string, error) {
+	b, err := s.GetBytes()
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // TruncatingByteSliceSink returns a Sink that writes up to len(*dst)
@@ -285,8 +363,16 @@ func (s *truncBytesSink) SetProto(m proto.Message) error {
 	return s.setBytesOwned(b)
 }
 
+func (s *truncBytesSink) GetProto(m proto.Message) error {
+	return proto.Unmarshal(*s.dst, m)
+}
+
 func (s *truncBytesSink) SetBytes(b []byte) error {
 	return s.setBytesOwned(cloneBytes(b))
+}
+
+func (s *truncBytesSink) GetBytes() ([]byte, error) {
+	return *s.dst, nil
 }
 
 func (s *truncBytesSink) setBytesOwned(b []byte) error {
@@ -313,4 +399,12 @@ func (s *truncBytesSink) SetString(v string) error {
 	s.v.b = nil
 	s.v.s = v
 	return nil
+}
+
+func (s *truncBytesSink) GetString() (string, error) {
+	b, err := s.GetBytes()
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
