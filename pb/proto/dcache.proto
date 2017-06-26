@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package get_info;
 
+//Statistics Data of key
+message Stat{
+    double rps = 1; //request per second
+    //TODO
+}
+
 message GetReq{
     string group=1;
     string key=2;
@@ -10,7 +16,7 @@ message GetReq{
 message GetRes{
     bool status=1;
     bytes value = 2;
-    double minute_qps = 3;
+    Stat stat=3;
 }
 
 message SetReq {
@@ -21,7 +27,7 @@ message SetReq {
 
 message SetRes {
     bool status = 1;
-    double minute_qps = 2;
+    Stat stat=2;
 }
 
 message DelReq {
@@ -32,26 +38,9 @@ message DelReq {
 message DelRes {
     bool status = 1;
     bytes value = 2;
-    double minute_qps = 3;    
+    Stat stat=3;
 }
 
-service OutterServ{
-    rpc Get(GetReq) returns (GetRes) {} 
-    rpc Set(SetReq) returns (SetRes) {}
-    rpc Del(DelReq) returns (DelRes) {}    
-}
-
-service InnerServ{
-    rpc Get(GetReq) returns (GetRes) {} 
-    rpc Set(SetReq) returns (SetRes) {}
-    rpc Del(DelReq) returns (DelRes) {}
-
-    rpc Register(RegisterReq) returns (RegisterRes) {}
-    rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
-    rpc SyncRegisters(SyncRegistersReq) returns (SyncRegistersRes) {}
-    rpc GetServStatus(GetServStatusReq) returns (GetServStatusRes) {}
-}
-//TODO
 message Address{
     string ip=1;
     int32 port=2;
@@ -88,5 +77,16 @@ message GetServStatusReq{
 message GetServStatusRes{
     bool status=1;
     //TODO
+}
+
+service CacheServ{
+    rpc Get(GetReq) returns (GetRes) {} 
+    rpc Set(SetReq) returns (SetRes) {}
+    rpc Del(DelReq) returns (DelRes) {}
+
+    rpc Register(RegisterReq) returns (RegisterRes) {}
+    rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
+    rpc SyncRegisters(SyncRegistersReq) returns (SyncRegistersRes) {}
+    rpc GetServStatus(GetServStatusReq) returns (GetServStatusRes) {}
 }
 
