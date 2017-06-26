@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package get_info;
+
+message GetReq{
+    string group=1;
+    string key=2;
+}
+
+message GetRes{
+    bool status=1;
+    bytes value = 2;
+    double minute_qps = 3;
+}
+
+message SetReq {
+    string group = 1;
+    string key = 2;
+    bytes value = 3;
+}
+
+message SetRes {
+    bool status = 1;
+    double minute_qps = 2;
+}
+
+message DelReq {
+    string group = 1;
+    string key = 2;
+}
+
+message DelRes {
+    bool status = 1;
+    bytes value = 2;
+    double minute_qps = 3;    
+}
+
+service OutterServ{
+    rpc Get(GetReq) returns (GetRes) {} 
+    rpc Set(SetReq) returns (SetRes) {}
+    rpc Del(DelReq) returns (DelRes) {}    
+}
+
+service InnerServ{
+    rpc Get(GetReq) returns (GetRes) {} 
+    rpc Set(SetReq) returns (SetRes) {}
+    rpc Del(DelReq) returns (DelRes) {}
+
+    rpc Register(RegisterReq) returns (RegisterRes) {}
+    rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
+    rpc SyncRegisters(SyncRegistersReq) returns (SyncRegistersRes) {}
+    rpc GetServStatus(GetServStatusReq) returns (GetServStatusRes) {}
+}
+//TODO
+message Address{
+    string ip=1;
+    int32 port=2;
+}
+
+message RegisterReq{
+    Address addr=1;
+}
+
+message RegisterRes{
+    bool status=1;
+}
+
+message UnregisterReq{
+    Address addr=1;
+}
+
+message UnregisterRes{
+    bool status=1;
+}
+
+message SyncRegistersReq{
+    repeated Address addrs=1;
+}
+
+message SyncRegistersRes{
+    bool status=1;
+}
+
+message GetServStatusReq{
+    Address addr=1;
+}
+
+message GetServStatusRes{
+    bool status=1;
+    //TODO
+}
+
