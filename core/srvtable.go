@@ -160,6 +160,7 @@ type STHash struct {
 	replicas int
 	hashes   []int
 	hashfn   HashFn
+	mutex    *sync.RWMutex
 }
 
 func (s *STHash) Init(replicas int, fn HashFn) {
@@ -176,6 +177,8 @@ func (s *STHash) Init(replicas int, fn HashFn) {
 }
 
 func (s *STHash) Load(t SrvTable) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for addr, _ := range t {
 		for i := 0; i < s.replicas; i++ {
 			hash := int(s.hashfn([]byte(strconv.Itoa(i) + addr)))
@@ -187,6 +190,8 @@ func (s *STHash) Load(t SrvTable) {
 }
 
 func (s *STHash) Pick(key string) string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 	if len(s.hashes) == 0 {
 		return ""
 	}
