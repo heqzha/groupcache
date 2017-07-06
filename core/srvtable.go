@@ -163,16 +163,18 @@ type STHash struct {
 }
 
 func (s *STHash) Init(replicas int, fn HashFn) {
-	s = &STHash{
-		repTable: map[int]string{},
-		replicas: replicas,
-		hashes:   []int{},
-		hashfn:   fn,
+	if s == nil {
+		s = new(STHash)
 	}
+	s.repTable = map[int]string{}
+	s.replicas = replicas
+	s.hashes = []int{}
+	s.hashfn = fn
 	if s.hashfn == nil {
 		s.hashfn = crc32.ChecksumIEEE
 	}
 }
+
 func (s *STHash) Load(t SrvTable) {
 	for addr, _ := range t {
 		for i := 0; i < s.replicas; i++ {
