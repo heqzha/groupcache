@@ -41,13 +41,8 @@ message DelRes {
     Stat stat=3;
 }
 
-message Address{
-    string ip=1;
-    int32 port=2;
-}
-
 message RegisterReq{
-    Address addr=1;
+    string addr=1;
 }
 
 message RegisterRes{
@@ -55,32 +50,20 @@ message RegisterRes{
 }
 
 message UnregisterReq{
-    Address addr=1;
+    string addr=1;
 }
 
 message UnregisterRes{
     bool status=1;
 }
 
-// TODO How to sync registers??
-message SyncRegistersReq{
-    repeated Address addrs=1;
-    int64 sync_ts=2;
+message SyncSrvTableReq{
+    bytes srv_table=1;
 }
 
-message SyncRegistersRes{
+message SyncSrvTableRes{
     bool status=1;
-    repeated Address addrs=2;
-    int64 last_sync_ts=3;
-}
-
-message GetServStatusReq{
-    Address addr=1;
-}
-
-message GetServStatusRes{
-    bool status=1;
-    //TODO
+    bytes srv_table=1;
 }
 
 service CacheServ{
@@ -90,7 +73,6 @@ service CacheServ{
 
     rpc Register(RegisterReq) returns (RegisterRes) {}
     rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
-    rpc SyncRegisters(SyncRegistersReq) returns (SyncRegistersRes) {}
-    rpc GetServStatus(GetServStatusReq) returns (GetServStatusRes) {}
+    rpc SyncSrvTable(SyncSrvTableReq) returns (SyncSrvTableRes) {}
 }
 
