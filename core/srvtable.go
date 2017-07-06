@@ -171,6 +171,7 @@ func (s *STHash) Init(replicas int, fn HashFn) {
 	s.replicas = replicas
 	s.hashes = []int{}
 	s.hashfn = fn
+	s.mutex = &sync.RWMutex{}
 	if s.hashfn == nil {
 		s.hashfn = crc32.ChecksumIEEE
 	}
