@@ -1,6 +1,7 @@
 package test
 
 import (
+	"math/rand"
 	"testing"
 
 	"fmt"
@@ -66,4 +67,35 @@ func TestSTM(t *testing.T) {
 	fmt.Println(clk.ReturnVCString())
 
 	fmt.Println(stm.CompareReadable(stm2))
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func TestSTHash(t *testing.T) {
+	var (
+		sth core.STHash
+		stm core.STM
+	)
+	stm.Init("127.0.0.1:1001")
+
+	for index := 1001; index < 1010; index++ {
+		stm.Register("127.0.0.1:" + strconv.Itoa(index))
+	}
+
+	sth.Init(3, nil)
+	sth.Load(stm.GetTable())
+
+	for index := 0; index < 20; index++ {
+		key := RandStringBytes(10)
+		srv := sth.Pick(key)
+		fmt.Println(key, srv)
+	}
 }
