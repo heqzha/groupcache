@@ -34,43 +34,74 @@ func (st *SrvTable) String() string {
 	return strings.Join(addrs, ";")
 }
 
-type STM struct {
+type SrvGroup map[string]*SrvTable
+
+func (s *SrvGroup) NewGroup(group string) *SrvTable {
+	if group == "" {
+		panic("missing group name")
+	}
+	(*s)[group] = new(SrvTable)
+	return (*s)[group]
+}
+
+func (s *SrvGroup) GetTable(group string) *SrvTable {
+	if group == "" {
+		panic("missing group name")
+	}
+	table, ok := (*s)[group]
+	if ok && table != nil {
+		return table
+	}
+	return s.NewGroup(group)
+}
+
+func (s *SrvGroup) SetTable(group string, table *SrvTable) {
+	if group == "" {
+		panic("missing group name")
+	}
+	(*s)[group] = table
+}
+
+type SGM struct {
 	myAddr string
-	table  SrvTable
+	group  SrvGroup
 	clock  VClock
 	mutex  *sync.RWMutex
 }
 
-func (s *STM) Init(myAddr string) {
+func (s *SGM) Init(myAddr string) {
 	if s == nil {
-		s = new(STM)
+		s = new(SGM)
 	}
 	s.myAddr = myAddr
-	s.table = SrvTable{}
+	s.group = SrvGroup{}
 	s.clock = VClock{}
 	s.mutex = &sync.RWMutex{}
 }
 
-func (s *STM) Register(addrs ...string) {
+func (s *SGM) Register(group string, addrs ...string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	table := s.group.GetTable(group)
 	for _, addr := range addrs {
-		s.table[addr] = true
+		(*table)[addr] = true
 	}
+
 	s.clock.Tick(s.myAddr)
 }
 
-func (s *STM) Unregister(addr string) {
+func (s *SGM) Unregister(group string, addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	_, eixst := s.table[addr]
+	table := s.group.GetTable(group)
+	_, eixst := (*table)[addr]
 	if eixst {
-		delete(s.table, addr)
+		delete((*table), addr)
 	}
 	s.clock.Tick(s.myAddr)
 }
 
-func (s *STM) Merge(t STM) Condition {
+func (s *SGM) Merge(t SGM) Condition {
 	s.mutex.Lock()
 	defer func() {
 		s.clock.Merge(t.clock)
@@ -81,11 +112,17 @@ func (s *STM) Merge(t STM) Condition {
 		return Equal
 	} else if s.clock.Compare(t.clock, Concurrent) {
 		//s and t are concurrent
-		s.table.Add(t.table)
+		for tg, tt := range t.group {
+			st := s.group.GetTable(tg)
+			st.Add((*tt))
+		}
 		return Concurrent
 	} else if s.clock.Compare(t.clock, Descendant) {
 		//s is older than t
-		s.table = t.table.Clone()
+		for tg, tt := range t.group {
+			ttc := tt.Clone()
+			s.group.SetTable(tg, &ttc)
+		}
 		return Descendant
 	} else if s.clock.Compare(t.clock, Ancestor) {
 		//s is newer than t
@@ -94,7 +131,7 @@ func (s *STM) Merge(t STM) Condition {
 	return Condition(-1)
 }
 
-func (s *STM) CompareReadable(t STM) string {
+func (s *SGM) CompareReadable(t SGM) string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if s.clock.Compare(t.clock, Equal) {
@@ -109,24 +146,24 @@ func (s *STM) CompareReadable(t STM) string {
 	return "Unknown"
 }
 
-func (s *STM) GetTable() SrvTable {
+func (s *SGM) GetTable(group string) *SrvTable {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.table
+	return s.group.GetTable(group)
 }
 
-func (s *STM) GetClock() VClock {
+func (s *SGM) GetClock() VClock {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.clock
 }
 
-func (s *STM) Dump() ([]byte, error) {
+func (s *SGM) Dump() ([]byte, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
-	if err := enc.Encode(s.table); err != nil {
+	if err := enc.Encode(s.group); err != nil {
 		return nil, err
 	}
 	if err := enc.Encode(s.clock); err != nil {
@@ -135,10 +172,10 @@ func (s *STM) Dump() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (s *STM) Load(buf []byte) error {
+func (s *SGM) Load(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	dec := gob.NewDecoder(r)
-	if err := dec.Decode(&s.table); err != nil {
+	if err := dec.Decode(&s.group); err != nil {
 		return err
 	}
 	if err := dec.Decode(&s.clock); err != nil {
@@ -149,21 +186,23 @@ func (s *STM) Load(buf []byte) error {
 
 type HashFn func(data []byte) uint32
 
-type STHash struct {
-	repTable map[int]string
+type RepTable map[int]string
+
+type SGHash struct {
+	group    map[string]*RepTable
 	replicas int
-	hashes   []int
+	hashes   map[string][]int
 	hashfn   HashFn
 	mutex    *sync.RWMutex
 }
 
-func (s *STHash) Init(replicas int, fn HashFn) {
+func (s *SGHash) Init(replicas int, fn HashFn) {
 	if s == nil {
-		s = new(STHash)
+		s = new(SGHash)
 	}
-	s.repTable = map[int]string{}
+	s.group = map[string]*RepTable{}
 	s.replicas = replicas
-	s.hashes = []int{}
+	s.hashes = map[string][]int{}
 	s.hashfn = fn
 	s.mutex = &sync.RWMutex{}
 	if s.hashfn == nil {
@@ -171,32 +210,40 @@ func (s *STHash) Init(replicas int, fn HashFn) {
 	}
 }
 
-func (s *STHash) Load(t SrvTable) {
+func (s *SGHash) Load(t SrvGroup) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	for addr, _ := range t {
-		for i := 0; i < s.replicas; i++ {
-			hash := int(s.hashfn([]byte(strconv.Itoa(i) + addr)))
-			s.hashes = append(s.hashes, hash)
-			s.repTable[hash] = addr
+	for tg, tt := range t {
+		for addr := range *tt {
+			for i := 0; i < s.replicas; i++ {
+				hash := int(s.hashfn([]byte(strconv.Itoa(i) + addr)))
+				if s.hashes[tg] == nil {
+					s.hashes[tg] = make([]int, len(*tt)*s.replicas)
+				}
+				s.hashes[tg] = append(s.hashes[tg], hash)
+				if s.group[tg] == nil {
+					s.group[tg] = new(RepTable)
+				}
+				(*s.group[tg])[hash] = addr
+			}
 		}
+		sort.Ints(s.hashes[tg])
 	}
-	sort.Ints(s.hashes)
 }
 
-func (s *STHash) Pick(key string) string {
+func (s *SGHash) Pick(group, key string) string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	if len(s.hashes) == 0 {
+	if len(s.hashes) == 0 || len(s.hashes[group]) == 0 {
 		return ""
 	}
 	hash := int(s.hashfn([]byte(key)))
 
-	idx := sort.Search(len(s.hashes), func(i int) bool { return s.hashes[i] >= hash })
+	idx := sort.Search(len(s.hashes[group]), func(i int) bool { return s.hashes[group][i] >= hash })
 
-	if idx == len(s.hashes) {
+	if idx == len(s.hashes[group]) {
 		idx = 0
 	}
 
-	return s.repTable[s.hashes[idx]]
+	return (*s.group[group])[s.hashes[group][idx]]
 }
