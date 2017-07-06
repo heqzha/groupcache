@@ -69,6 +69,32 @@ func TestSTM(t *testing.T) {
 	fmt.Println(stm.CompareReadable(stm2))
 }
 
+func TestSTMDumpLoad(t *testing.T) {
+	var (
+		stm  core.STM
+		stm2 core.STM
+	)
+	stm.Init("127.0.0.1:1001")
+	stm2.Init("127.0.0.2:1001")
+
+	for index := 1001; index < 1004; index++ {
+		stm.Register("127.0.0.1:" + strconv.Itoa(index))
+	}
+
+	d, err := stm.Dump()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := stm2.Load(d); err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(stm.CompareReadable(stm2))
+}
+
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func RandStringBytes(n int) string {
