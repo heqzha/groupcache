@@ -126,9 +126,6 @@ func (s *STM) Dump() ([]byte, error) {
 	defer s.mutex.RUnlock()
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
-	if err := enc.Encode(s.myAddr); err != nil {
-		return nil, err
-	}
 	if err := enc.Encode(s.table); err != nil {
 		return nil, err
 	}
@@ -141,9 +138,6 @@ func (s *STM) Dump() ([]byte, error) {
 func (s *STM) Load(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	dec := gob.NewDecoder(r)
-	if err := dec.Decode(&s.myAddr); err != nil {
-		return err
-	}
 	if err := dec.Decode(&s.table); err != nil {
 		return err
 	}
