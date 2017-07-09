@@ -1,6 +1,7 @@
 package test
 
 import (
+	"strconv"
 	"testing"
 
 	"fmt"
@@ -47,7 +48,52 @@ func TestSrvGroup(t *testing.T) {
 }
 
 func TestSGM(t *testing.T) {
+	var (
+		sgm  core.SGM
+		sgm2 core.SGM
+	)
+	sgm.Init("127.0.0.1:1001")
+	sgm2.Init("127.0.0.2:1001")
 
+	for index := 1001; index < 1004; index++ {
+		sgm.Register("group1", "127.0.0.1:"+strconv.Itoa(index))
+	}
+	for index := 1002; index < 1006; index++ {
+		sgm.Register("group2", "127.0.0.1:"+strconv.Itoa(index))
+	}
+	fmt.Println(sgm.GetGroups())
+	tb1g1 := sgm.GetTable("group1")
+	tb1g2 := sgm.GetTable("group2")
+	clk1 := sgm.GetClock()
+	fmt.Println(tb1g1.String())
+	fmt.Println(tb1g2.String())
+	fmt.Println(clk1.ReturnVCString())
+
+	for index := 1001; index < 1003; index++ {
+		sgm2.Register("group1", "127.0.0.2:"+strconv.Itoa(index))
+	}
+	tb2gp1 := sgm2.GetTable("group1")
+	clk2 := sgm2.GetClock()
+	fmt.Println(tb2gp1.String())
+	fmt.Println(clk2.ReturnVCString())
+
+	sgm2.Merge(sgm)
+	fmt.Println("Condition:", sgm2.CompareReadable(sgm))
+	tb2mgp1 := sgm2.GetTable("group1")
+	tb2mgp2 := sgm2.GetTable("group2")
+	clk2 = sgm2.GetClock()
+	fmt.Println(tb2mgp1.String())
+	fmt.Println(tb2mgp2.String())
+	fmt.Println(clk2.ReturnVCString())
+
+	sgm.Merge(sgm2)
+	fmt.Println("Condition:", sgm.CompareReadable(sgm2))
+	tb1mgp1 := sgm.GetTable("group1")
+	tb1mgp2 := sgm.GetTable("group2")
+	clk1 = sgm.GetClock()
+	fmt.Println(tb1mgp1.String())
+	fmt.Println(tb1mgp2.String())
+	fmt.Println(clk1.ReturnVCString())
 }
 
 // func TestSTM(t *testing.T) {

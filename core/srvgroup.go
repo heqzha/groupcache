@@ -40,7 +40,7 @@ func (s *SrvGroup) NewGroup(group string) *SrvTable {
 	if group == "" {
 		panic("missing group name")
 	}
-	(*s)[group] = new(SrvTable)
+	(*s)[group] = &SrvTable{}
 	return (*s)[group]
 }
 
@@ -99,6 +99,14 @@ func (s *SGM) Unregister(group string, addr string) {
 		delete((*table), addr)
 	}
 	s.clock.Tick(s.myAddr)
+}
+
+func (s *SGM) GetGroups() []string {
+	groups := []string{}
+	for g := range s.group {
+		groups = append(groups, g)
+	}
+	return groups
 }
 
 func (s *SGM) Merge(t SGM) Condition {
