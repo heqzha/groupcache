@@ -1,4 +1,4 @@
-package core
+package rpc
 
 import (
 	"context"
@@ -65,4 +65,8 @@ func (c *CacheServClient) SyncSrvGroups(srvgroups []byte) (*pb.SyncSrvGroupsRes,
 	return c.cli.SyncSrvGroups(context.Background(), &pb.SyncSrvGroupsReq{
 		SrvGroups: srvgroups,
 	})
+}
+
+func (c *CacheServClient) Close() error {
+	return c.conn.Close()
 }

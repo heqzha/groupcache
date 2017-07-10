@@ -1,4 +1,4 @@
-package core
+package rpc
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func runRPCServer(port int, register func(*grpc.Server, ...interface{}), service
 	grpcServer.Serve(lis)
 }
 
-func RunServer(port int) {
+func RunRPCServer(port int) {
 	runRPCServer(port, func(grpc *grpc.Server, services ...interface{}) {
 		for _, s := range services {
 			switch s.(type) {
