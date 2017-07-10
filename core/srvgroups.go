@@ -34,9 +34,9 @@ func (st *SrvTable) String() string {
 	return strings.Join(addrs, ";")
 }
 
-type SrvGroup map[string]*SrvTable
+type SrvGroups map[string]*SrvTable
 
-func (s *SrvGroup) NewGroup(group string) *SrvTable {
+func (s *SrvGroups) NewGroup(group string) *SrvTable {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -44,7 +44,7 @@ func (s *SrvGroup) NewGroup(group string) *SrvTable {
 	return (*s)[group]
 }
 
-func (s *SrvGroup) GetTable(group string) *SrvTable {
+func (s *SrvGroups) GetTable(group string) *SrvTable {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -55,7 +55,7 @@ func (s *SrvGroup) GetTable(group string) *SrvTable {
 	return s.NewGroup(group)
 }
 
-func (s *SrvGroup) SetTable(group string, table *SrvTable) {
+func (s *SrvGroups) SetTable(group string, table *SrvTable) {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -64,7 +64,7 @@ func (s *SrvGroup) SetTable(group string, table *SrvTable) {
 
 type SGM struct {
 	myAddr string
-	group  SrvGroup
+	groups SrvGroups
 	clock  VClock
 	mutex  *sync.RWMutex
 }
@@ -74,7 +74,7 @@ func (s *SGM) Init(myAddr string) {
 		s = new(SGM)
 	}
 	s.myAddr = myAddr
-	s.group = SrvGroup{}
+	s.groups = SrvGroups{}
 	s.clock = VClock{}
 	s.mutex = &sync.RWMutex{}
 }
@@ -82,7 +82,7 @@ func (s *SGM) Init(myAddr string) {
 func (s *SGM) Register(group string, addrs ...string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.group.GetTable(group)
+	table := s.groups.GetTable(group)
 	for _, addr := range addrs {
 		(*table)[addr] = true
 	}
@@ -93,7 +93,7 @@ func (s *SGM) Register(group string, addrs ...string) {
 func (s *SGM) Unregister(group string, addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.group.GetTable(group)
+	table := s.groups.GetTable(group)
 	_, eixst := (*table)[addr]
 	if eixst {
 		delete((*table), addr)
@@ -103,52 +103,52 @@ func (s *SGM) Unregister(group string, addr string) {
 
 func (s *SGM) GetGroupNames() []string {
 	groups := []string{}
-	for g := range s.group {
+	for g := range s.groups {
 		groups = append(groups, g)
 	}
 	return groups
 }
 
-func (s *SGM) Merge(t SGM) Condition {
+func (s *SGM) Merge(as SGM) Condition {
 	s.mutex.Lock()
 	defer func() {
-		s.clock.Merge(t.clock)
+		s.clock.Merge(as.clock)
 		s.mutex.Unlock()
 	}()
-	if s.clock.Compare(t.clock, Equal) {
-		//s and t are equal
+	if s.clock.Compare(as.clock, Equal) {
+		//s and as are equal
 		return Equal
-	} else if s.clock.Compare(t.clock, Concurrent) {
-		//s and t are concurrent
-		for tg, tt := range t.group {
-			st := s.group.GetTable(tg)
+	} else if s.clock.Compare(as.clock, Concurrent) {
+		//s and as are concurrent
+		for tg, tt := range as.groups {
+			st := s.groups.GetTable(tg)
 			st.Add((*tt))
 		}
 		return Concurrent
-	} else if s.clock.Compare(t.clock, Descendant) {
-		//s is older than t
-		for tg, tt := range t.group {
+	} else if s.clock.Compare(as.clock, Descendant) {
+		//s is older than as
+		for tg, tt := range as.groups {
 			ttc := tt.Clone()
-			s.group.SetTable(tg, &ttc)
+			s.groups.SetTable(tg, &ttc)
 		}
 		return Descendant
-	} else if s.clock.Compare(t.clock, Ancestor) {
+	} else if s.clock.Compare(as.clock, Ancestor) {
 		//s is newer than t
 		return Ancestor
 	}
 	return Condition(-1)
 }
 
-func (s *SGM) CompareReadable(t SGM) string {
+func (s *SGM) CompareReadable(as SGM) string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if s.clock.Compare(t.clock, Equal) {
+	if s.clock.Compare(as.clock, Equal) {
 		return "Equal"
-	} else if s.clock.Compare(t.clock, Concurrent) {
+	} else if s.clock.Compare(as.clock, Concurrent) {
 		return "Concurrent"
-	} else if s.clock.Compare(t.clock, Descendant) {
+	} else if s.clock.Compare(as.clock, Descendant) {
 		return "Descendant"
-	} else if s.clock.Compare(t.clock, Ancestor) {
+	} else if s.clock.Compare(as.clock, Ancestor) {
 		return "Ancestor"
 	}
 	return "Unknown"
@@ -157,11 +157,11 @@ func (s *SGM) CompareReadable(t SGM) string {
 func (s *SGM) GetTable(group string) *SrvTable {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.group.GetTable(group)
+	return s.groups.GetTable(group)
 }
 
-func (s *SGM) GetGroups() SrvGroup {
-	return s.group
+func (s *SGM) GetGroups() SrvGroups {
+	return s.groups
 }
 
 func (s *SGM) GetClock() VClock {
@@ -175,7 +175,7 @@ func (s *SGM) Dump() ([]byte, error) {
 	defer s.mutex.RUnlock()
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
-	if err := enc.Encode(s.group); err != nil {
+	if err := enc.Encode(s.groups); err != nil {
 		return nil, err
 	}
 	if err := enc.Encode(s.clock); err != nil {
@@ -187,7 +187,7 @@ func (s *SGM) Dump() ([]byte, error) {
 func (s *SGM) Load(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	dec := gob.NewDecoder(r)
-	if err := dec.Decode(&s.group); err != nil {
+	if err := dec.Decode(&s.groups); err != nil {
 		return err
 	}
 	if err := dec.Decode(&s.clock); err != nil {
@@ -222,10 +222,10 @@ func (s *SGHash) Init(replicas int, fn HashFn) {
 	}
 }
 
-func (s *SGHash) Load(t SrvGroup) {
+func (s *SGHash) Load(sg SrvGroups) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	for tg, tt := range t {
+	for tg, tt := range sg {
 		for addr := range *tt {
 			for i := 0; i < s.replicas; i++ {
 				hash := int(s.hashfn([]byte(strconv.Itoa(i) + addr)))
