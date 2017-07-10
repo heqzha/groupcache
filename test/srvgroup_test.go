@@ -28,7 +28,7 @@ func TestSrvTable(t *testing.T) {
 }
 
 func TestSrvGroup(t *testing.T) {
-	group := core.SrvGroup{}
+	group := core.SrvGroups{}
 	group.NewGroup("test1")
 	tb1 := core.SrvTable{
 		"127.0.0.1:1001": true,
