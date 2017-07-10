@@ -1,6 +1,7 @@
 package test
 
 import (
+	"math/rand"
 	"strconv"
 	"testing"
 
@@ -61,7 +62,7 @@ func TestSGM(t *testing.T) {
 	for index := 1002; index < 1006; index++ {
 		sgm.Register("group2", "127.0.0.1:"+strconv.Itoa(index))
 	}
-	fmt.Println(sgm.GetGroups())
+	fmt.Println(sgm.GetGroupNames())
 	tb1g1 := sgm.GetTable("group1")
 	tb1g2 := sgm.GetTable("group2")
 	clk1 := sgm.GetClock()
@@ -96,100 +97,64 @@ func TestSGM(t *testing.T) {
 	fmt.Println(clk1.ReturnVCString())
 }
 
-// func TestSTM(t *testing.T) {
-// 	var (
-// 		stm  core.STM
-// 		stm2 core.STM
-// 	)
-// 	stm.Init("127.0.0.1:1001")
-// 	stm2.Init("127.0.0.2:1001")
+func TestSTMDumpLoad(t *testing.T) {
+	var (
+		sgm  core.SGM
+		sgm2 core.SGM
+	)
+	sgm.Init("127.0.0.1:1001")
+	sgm2.Init("127.0.0.2:1001")
 
-// 	for index := 1001; index < 1004; index++ {
-// 		stm.Register("127.0.0.1:" + strconv.Itoa(index))
-// 	}
-// 	tb := stm.GetTable()
-// 	clk := stm.GetClock()
-// 	fmt.Println(tb.String())
-// 	fmt.Println(clk.ReturnVCString())
+	for index := 1001; index < 1004; index++ {
+		sgm.Register("group1", "127.0.0.1:"+strconv.Itoa(index))
+	}
 
-// 	for index := 1001; index < 1003; index++ {
-// 		stm2.Register("127.0.0.2:" + strconv.Itoa(index))
-// 	}
-// 	tb = stm2.GetTable()
-// 	clk = stm2.GetClock()
-// 	fmt.Println(tb.String())
-// 	fmt.Println(clk.ReturnVCString())
+	for index := 1003; index < 1007; index++ {
+		sgm.Register("group2", "127.0.0.1:"+strconv.Itoa(index))
+	}
 
-// 	cond := stm2.Merge(stm)
-// 	fmt.Println("Condition:", cond)
-// 	tb = stm2.GetTable()
-// 	clk = stm2.GetClock()
-// 	fmt.Println(tb.String())
-// 	fmt.Println(clk.ReturnVCString())
+	d, err := sgm.Dump()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-// 	cond = stm.Merge(stm2)
-// 	fmt.Println("Condition:", cond)
-// 	tb = stm.GetTable()
-// 	clk = stm.GetClock()
-// 	fmt.Println(tb.String())
-// 	fmt.Println(clk.ReturnVCString())
+	if err := sgm2.Load(d); err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(sgm2.GetTable("group1").String())
+	fmt.Println(sgm2.GetTable("group2").String())
+	fmt.Println(sgm.CompareReadable(sgm2))
+}
 
-// 	fmt.Println(stm.CompareReadable(stm2))
-// }
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-// func TestSTMDumpLoad(t *testing.T) {
-// 	var (
-// 		stm  core.STM
-// 		stm2 core.STM
-// 	)
-// 	stm.Init("127.0.0.1:1001")
-// 	stm2.Init("127.0.0.2:1001")
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
 
-// 	for index := 1001; index < 1004; index++ {
-// 		stm.Register("127.0.0.1:" + strconv.Itoa(index))
-// 	}
+func TestSTHash(t *testing.T) {
+	var (
+		sth core.SGHash
+		stm core.SGM
+	)
+	stm.Init("127.0.0.1:1001")
 
-// 	d, err := stm.Dump()
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
+	for index := 1001; index < 1010; index++ {
+		stm.Register("group1", "127.0.0.1:"+strconv.Itoa(index))
+	}
 
-// 	if err := stm2.Load(d); err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
+	sth.Init(3, nil)
+	sth.Load(stm.GetGroups())
 
-// 	fmt.Println(stm.CompareReadable(stm2))
-// }
-
-// const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-// func RandStringBytes(n int) string {
-// 	b := make([]byte, n)
-// 	for i := range b {
-// 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-// 	}
-// 	return string(b)
-// }
-
-// func TestSTHash(t *testing.T) {
-// 	var (
-// 		sth core.STHash
-// 		stm core.STM
-// 	)
-// 	stm.Init("127.0.0.1:1001")
-
-// 	for index := 1001; index < 1010; index++ {
-// 		stm.Register("127.0.0.1:" + strconv.Itoa(index))
-// 	}
-
-// 	sth.Init(3, nil)
-// 	sth.Load(stm.GetTable())
-
-// 	for index := 0; index < 20; index++ {
-// 		key := RandStringBytes(10)
-// 		srv := sth.Pick(key)
-// 		fmt.Println(key, srv)
-// 	}
-// }
+	for index := 0; index < 20; index++ {
+		key := RandStringBytes(10)
+		srv := sth.Pick("group1", key)
+		fmt.Println(key, srv)
+	}
+}
