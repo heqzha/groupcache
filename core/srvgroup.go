@@ -101,7 +101,7 @@ func (s *SGM) Unregister(group string, addr string) {
 	s.clock.Tick(s.myAddr)
 }
 
-func (s *SGM) GetGroups() []string {
+func (s *SGM) GetGroupNames() []string {
 	groups := []string{}
 	for g := range s.group {
 		groups = append(groups, g)
@@ -158,6 +158,10 @@ func (s *SGM) GetTable(group string) *SrvTable {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.group.GetTable(group)
+}
+
+func (s *SGM) GetGroups() SrvGroup {
+	return s.group
 }
 
 func (s *SGM) GetClock() VClock {
@@ -226,11 +230,11 @@ func (s *SGHash) Load(t SrvGroup) {
 			for i := 0; i < s.replicas; i++ {
 				hash := int(s.hashfn([]byte(strconv.Itoa(i) + addr)))
 				if s.hashes[tg] == nil {
-					s.hashes[tg] = make([]int, len(*tt)*s.replicas)
+					s.hashes[tg] = make([]int, 0)
 				}
 				s.hashes[tg] = append(s.hashes[tg], hash)
 				if s.group[tg] == nil {
-					s.group[tg] = new(RepTable)
+					s.group[tg] = &RepTable{}
 				}
 				(*s.group[tg])[hash] = addr
 			}
@@ -252,6 +256,5 @@ func (s *SGHash) Pick(group, key string) string {
 	if idx == len(s.hashes[group]) {
 		idx = 0
 	}
-
 	return (*s.group[group])[s.hashes[group][idx]]
 }
