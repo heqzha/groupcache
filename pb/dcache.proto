@@ -1,3 +1,4 @@
+// protoc -I . dcache.proto --go_out=plugins=grpc:.
 syntax = "proto3";
 
 package get_info;
@@ -42,7 +43,8 @@ message DelRes {
 }
 
 message RegisterReq{
-    string addr=1;
+    string group=1;
+    string addr=2;
 }
 
 message RegisterRes{
@@ -50,20 +52,22 @@ message RegisterRes{
 }
 
 message UnregisterReq{
-    string addr=1;
+    string group=1;
+    string addr=2;
 }
 
 message UnregisterRes{
     bool status=1;
 }
 
-message SyncSrvTableReq{
-    bytes srv_table=1;
+message SyncSrvGroupsReq{
+    bytes srv_groups=1;
 }
 
-message SyncSrvTableRes{
+message SyncSrvGroupsRes{
     bool status=1;
-    bytes srv_table=1;
+    int32 condition=2;
+    bytes srv_groups=3;
 }
 
 service CacheServ{
@@ -73,6 +77,6 @@ service CacheServ{
 
     rpc Register(RegisterReq) returns (RegisterRes) {}
     rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
-    rpc SyncSrvTable(SyncSrvTableReq) returns (SyncSrvTableRes) {}
+    rpc SyncSrvTable(SyncSrvGroupsReq) returns (SyncSrvGroupsRes) {}
 }
 
