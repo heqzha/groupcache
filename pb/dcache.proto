@@ -1,7 +1,7 @@
 // protoc -I . dcache.proto --go_out=plugins=grpc:.
 syntax = "proto3";
 
-package get_info;
+package pb;
 
 //Statistics Data of key
 message Stat{
@@ -77,6 +77,6 @@ service CacheServ{
 
     rpc Register(RegisterReq) returns (RegisterRes) {}
     rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
-    rpc SyncSrvTable(SyncSrvGroupsReq) returns (SyncSrvGroupsRes) {}
+    rpc SyncSrvGroups(SyncSrvGroupsReq) returns (SyncSrvGroupsRes) {}
 }
 
