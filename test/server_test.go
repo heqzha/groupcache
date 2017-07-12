@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/heqzha/dcache/core"
+	"github.com/heqzha/dcache/rpc"
 )
 
 func TestDCacheService(t *testing.T) {
-	ser := core.DCacheService{}
+	ser := rpc.DCacheService{}
 	ser.Get(context.Background(), nil)
 	ser.Set(context.Background(), nil)
 	ser.Del(context.Background(), nil)
