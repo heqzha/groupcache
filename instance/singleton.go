@@ -42,3 +42,14 @@ func GetSGHInst() *core.SGHash {
 	})
 	return sghInst
 }
+
+//Message queue instance
+var msgQInst *core.MessageQueue
+var msgQInstOnce sync.Once
+
+func GetMsgQInst() *core.MessageQueue {
+	msgQInstOnce.Do(func() {
+		msgQInst = &core.MessageQueue{}
+	})
+	return msgQInst
+}
