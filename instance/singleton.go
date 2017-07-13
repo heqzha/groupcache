@@ -12,6 +12,7 @@ var confInstOnce sync.Once
 
 func GetConfInst() *core.Config {
 	confInstOnce.Do(func() {
+		confInst = new(core.Config)
 		confInst.Init()
 	})
 	return confInst
@@ -27,6 +28,7 @@ func GetSGMInst() *core.SGM {
 		if conf.Addr == "" {
 			panic("missing addr in config.yaml")
 		}
+		sgmInst = new(core.SGM)
 		sgmInst.Init(conf.Addr)
 	})
 	return sgmInst
@@ -38,6 +40,7 @@ var sghInstOnce sync.Once
 
 func GetSGHInst() *core.SGHash {
 	sghInstOnce.Do(func() {
+		sghInst = new(core.SGHash)
 		sghInst.Init(3, nil)
 	})
 	return sghInst
@@ -49,7 +52,8 @@ var msgQInstOnce sync.Once
 
 func GetMsgQInst() *core.MessageQueue {
 	msgQInstOnce.Do(func() {
-		msgQInst = &core.MessageQueue{}
+		msgQInst = new(core.MessageQueue)
+		msgQInst.Init()
 	})
 	return msgQInst
 }

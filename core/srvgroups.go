@@ -72,9 +72,6 @@ type SGM struct {
 }
 
 func (s *SGM) Init(myAddr string) {
-	if s == nil {
-		s = new(SGM)
-	}
 	s.myAddr = myAddr
 	s.groups = SrvGroups{}
 	s.clock = VClock{}
@@ -222,9 +219,6 @@ type SGHash struct {
 }
 
 func (s *SGHash) Init(replicas int, fn HashFn) {
-	if s == nil {
-		s = new(SGHash)
-	}
 	s.group = map[string]*RepTable{}
 	s.replicas = replicas
 	s.hashes = map[string][]int{}
