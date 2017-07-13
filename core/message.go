@@ -1,21 +1,37 @@
 package core
 
-import "github.com/heqzha/goutils/container"
+import (
+	"sync"
 
-type MessageQueue map[string]*container.Queue
+	"github.com/heqzha/goutils/container"
+)
 
-func (m MessageQueue) Push(chn string, msg interface{}) {
-	_, ok := m[chn]
-	if !ok {
-		m[chn] = new(container.Queue)
-	}
-	m[chn].Push(msg)
+type MessageQueue struct {
+	q    map[string]*container.Queue
+	sync *sync.Mutex
 }
 
-func (m MessageQueue) Pop(chn string) interface{} {
-	c, ok := m[chn]
+func (m *MessageQueue) Init() {
+	m.q = make(map[string]*container.Queue)
+	m.sync = &sync.Mutex{}
+}
+
+func (m *MessageQueue) Push(chn string, msg interface{}) {
+	_, ok := m.q[chn]
+	if !ok {
+		m.q[chn] = new(container.Queue)
+	}
+	m.q[chn].Push(msg)
+}
+
+func (m *MessageQueue) Pop(chn string) interface{} {
+	c, ok := m.q[chn]
 	if ok && c != nil {
 		return c.Pop()
 	}
 	return nil
+}
+
+func (m *MessageQueue) Len(chn string) int {
+	return m.q[chn].Len()
 }

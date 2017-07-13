@@ -13,7 +13,7 @@ func TestMessageQueue(t *testing.T) {
 		q.Push("test1", index)
 	}
 
-	for (*q)["test1"].Len() != 0 {
+	for q.Len("test1") != 0 {
 		fmt.Println(q.Pop("test1"))
 	}
 }
