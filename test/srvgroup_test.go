@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+	"time"
 
 	"fmt"
 
@@ -12,13 +13,13 @@ import (
 
 func TestSrvTable(t *testing.T) {
 	tb1 := core.SrvTable{
-		"127.0.0.1:1001": true,
-		"127.0.0.1:1002": true,
-		"127.0.0.1:1003": true,
+		"127.0.0.1:1001": 0,
+		"127.0.0.1:1002": 0,
+		"127.0.0.1:1003": 0,
 	}
 	tb2 := core.SrvTable{
-		"127.0.0.1:1004": true,
-		"127.0.0.1:1005": true,
+		"127.0.0.1:1004": 0,
+		"127.0.0.1:1005": 0,
 	}
 	tb1.Add(tb2)
 	fmt.Println(tb1.String())
@@ -31,13 +32,13 @@ func TestSrvGroup(t *testing.T) {
 	group := core.SrvGroups{}
 	group.NewGroup("test1")
 	tb1 := core.SrvTable{
-		"127.0.0.1:1001": true,
-		"127.0.0.1:1002": true,
-		"127.0.0.1:1003": true,
+		"127.0.0.1:1001": 0,
+		"127.0.0.1:1002": 0,
+		"127.0.0.1:1003": 0,
 	}
 	tb2 := core.SrvTable{
-		"127.0.0.1:1004": true,
-		"127.0.0.1:1005": true,
+		"127.0.0.1:1004": 0,
+		"127.0.0.1:1005": 0,
 	}
 	group.SetTable("test1", &tb1)
 
@@ -69,6 +70,10 @@ func TestSGM(t *testing.T) {
 	fmt.Println(tb1g1.String())
 	fmt.Println(tb1g2.String())
 	fmt.Println(clk1.ReturnVCString())
+
+	time.Sleep(2 * time.Second)
+
+	sgm.UpdateTimestamp("group1", "127.0.0.1:1001")
 
 	for index := 1001; index < 1003; index++ {
 		sgm2.Register("group1", "127.0.0.2:"+strconv.Itoa(index))

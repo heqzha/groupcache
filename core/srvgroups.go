@@ -3,15 +3,16 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"hash/crc32"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
-//TODO Change bool to int64, which record last ping timestamp
-type SrvTable map[string]bool
+type SrvTable map[string]int64
 
 func (st *SrvTable) Add(t SrvTable) {
 	for addr, v := range t {
@@ -29,8 +30,8 @@ func (st *SrvTable) Clone() SrvTable {
 
 func (st *SrvTable) String() string {
 	addrs := []string{}
-	for addr, _ := range *st {
-		addrs = append(addrs, addr)
+	for addr, ts := range *st {
+		addrs = append(addrs, fmt.Sprintf("%s-%d", addr, ts))
 	}
 	return strings.Join(addrs, ";")
 }
@@ -85,19 +86,30 @@ func (s *SGM) Register(group string, addrs ...string) {
 	defer s.mutex.Unlock()
 	table := s.groups.GetTable(group)
 	for _, addr := range addrs {
-		(*table)[addr] = true
+		(*table)[addr] = time.Now().Unix()
 	}
 
 	s.clock.Tick(s.myAddr)
 }
 
-func (s *SGM) Unregister(group string, addr string) {
+func (s *SGM) Unregister(group, addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	table := s.groups.GetTable(group)
 	_, eixst := (*table)[addr]
 	if eixst {
 		delete((*table), addr)
+	}
+	s.clock.Tick(s.myAddr)
+}
+
+func (s *SGM) UpdateTimestamp(group, addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	table := s.groups.GetTable(group)
+	_, eixst := (*table)[addr]
+	if eixst {
+		(*table)[addr] = time.Now().Unix()
 	}
 	s.clock.Tick(s.myAddr)
 }
