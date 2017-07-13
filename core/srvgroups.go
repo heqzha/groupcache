@@ -10,6 +10,7 @@ import (
 	"sync"
 )
 
+//TODO Change bool to int64, which record last ping timestamp
 type SrvTable map[string]bool
 
 func (st *SrvTable) Add(t SrvTable) {
