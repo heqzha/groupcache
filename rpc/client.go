@@ -67,6 +67,13 @@ func (c *CacheServClient) SyncSrvGroups(srvgroups []byte) (*pb.SyncSrvGroupsRes,
 	})
 }
 
+func (c *CacheServClient) Ping(group, addr string) (*pb.PingRes, error) {
+	return c.cli.Ping(context.Background(), &pb.PingReq{
+		Group: group,
+		Addr:  addr,
+	})
+}
+
 func (c *CacheServClient) Close() error {
 	return c.conn.Close()
 }

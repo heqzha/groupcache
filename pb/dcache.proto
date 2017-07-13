@@ -70,6 +70,15 @@ message SyncSrvGroupsRes{
     bytes srv_groups=3;
 }
 
+message PingReq{
+    string group=1;
+    string addr=2;
+}
+
+message PingRes{
+    bool status=1;
+}
+
 service CacheServ{
     rpc Get(GetReq) returns (GetRes) {} 
     rpc Set(SetReq) returns (SetRes) {}
@@ -78,5 +87,6 @@ service CacheServ{
     rpc Register(RegisterReq) returns (RegisterRes) {}
     rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
     rpc SyncSrvGroups(SyncSrvGroupsReq) returns (SyncSrvGroupsRes) {}
+    rpc Ping(PingReq) returns (PingRes) {}
 }
 
