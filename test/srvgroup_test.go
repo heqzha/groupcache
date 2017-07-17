@@ -29,7 +29,7 @@ func TestSrvTable(t *testing.T) {
 }
 
 func TestSrvGroup(t *testing.T) {
-	group := core.SrvGroups{}
+	group := core.SrvGroup{}
 	group.NewGroup("test1")
 	tb1 := core.SrvTable{
 		"127.0.0.1:1001": 0,
@@ -155,7 +155,7 @@ func TestSTHash(t *testing.T) {
 	}
 
 	sth.Init(3, nil)
-	sth.Load(stm.GetGroups())
+	sth.Load(stm.GetGroup())
 
 	for index := 0; index < 20; index++ {
 		key := RandStringBytes(10)

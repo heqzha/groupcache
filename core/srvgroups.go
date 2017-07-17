@@ -36,9 +36,9 @@ func (st *SrvTable) String() string {
 	return strings.Join(addrs, ";")
 }
 
-type SrvGroups map[string]*SrvTable
+type SrvGroup map[string]*SrvTable
 
-func (s *SrvGroups) NewGroup(group string) *SrvTable {
+func (s *SrvGroup) NewGroup(group string) *SrvTable {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -46,7 +46,7 @@ func (s *SrvGroups) NewGroup(group string) *SrvTable {
 	return (*s)[group]
 }
 
-func (s *SrvGroups) GetTable(group string) *SrvTable {
+func (s *SrvGroup) GetTable(group string) *SrvTable {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -57,7 +57,7 @@ func (s *SrvGroups) GetTable(group string) *SrvTable {
 	return s.NewGroup(group)
 }
 
-func (s *SrvGroups) SetTable(group string, table *SrvTable) {
+func (s *SrvGroup) SetTable(group string, table *SrvTable) {
 	if group == "" {
 		panic("missing group name")
 	}
@@ -66,14 +66,14 @@ func (s *SrvGroups) SetTable(group string, table *SrvTable) {
 
 type SGM struct {
 	myAddr string
-	groups SrvGroups
+	group  SrvGroup
 	clock  VClock
 	mutex  *sync.RWMutex
 }
 
 func (s *SGM) Init(myAddr string) {
 	s.myAddr = myAddr
-	s.groups = SrvGroups{}
+	s.group = SrvGroup{}
 	s.clock = VClock{}
 	s.mutex = &sync.RWMutex{}
 }
@@ -81,7 +81,7 @@ func (s *SGM) Init(myAddr string) {
 func (s *SGM) Register(group string, addrs ...string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.groups.GetTable(group)
+	table := s.group.GetTable(group)
 	for _, addr := range addrs {
 		(*table)[addr] = time.Now().Unix()
 	}
@@ -92,7 +92,7 @@ func (s *SGM) Register(group string, addrs ...string) {
 func (s *SGM) Unregister(group, addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.groups.GetTable(group)
+	table := s.group.GetTable(group)
 	_, eixst := (*table)[addr]
 	if eixst {
 		delete((*table), addr)
@@ -103,7 +103,7 @@ func (s *SGM) Unregister(group, addr string) {
 func (s *SGM) UpdateTimestamp(group, addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.groups.GetTable(group)
+	table := s.group.GetTable(group)
 	_, eixst := (*table)[addr]
 	if eixst {
 		(*table)[addr] = time.Now().Unix()
@@ -112,11 +112,11 @@ func (s *SGM) UpdateTimestamp(group, addr string) {
 }
 
 func (s *SGM) GetGroupNames() []string {
-	groups := []string{}
-	for g := range s.groups {
-		groups = append(groups, g)
+	group := []string{}
+	for g := range s.group {
+		group = append(group, g)
 	}
-	return groups
+	return group
 }
 
 func (s *SGM) Merge(as SGM) Condition {
@@ -130,16 +130,16 @@ func (s *SGM) Merge(as SGM) Condition {
 		return Equal
 	} else if s.clock.Compare(as.clock, Concurrent) {
 		//s and as are concurrent
-		for tg, tt := range as.groups {
-			st := s.groups.GetTable(tg)
+		for tg, tt := range as.group {
+			st := s.group.GetTable(tg)
 			st.Add((*tt))
 		}
 		return Concurrent
 	} else if s.clock.Compare(as.clock, Descendant) {
 		//s is older than as
-		for tg, tt := range as.groups {
+		for tg, tt := range as.group {
 			ttc := tt.Clone()
-			s.groups.SetTable(tg, &ttc)
+			s.group.SetTable(tg, &ttc)
 		}
 		return Descendant
 	} else if s.clock.Compare(as.clock, Ancestor) {
@@ -167,11 +167,11 @@ func (s *SGM) CompareReadable(as SGM) string {
 func (s *SGM) GetTable(group string) *SrvTable {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.groups.GetTable(group)
+	return s.group.GetTable(group)
 }
 
-func (s *SGM) GetGroups() SrvGroups {
-	return s.groups
+func (s *SGM) GetGroup() SrvGroup {
+	return s.group
 }
 
 func (s *SGM) GetClock() VClock {
@@ -185,7 +185,7 @@ func (s *SGM) Dump() ([]byte, error) {
 	defer s.mutex.RUnlock()
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
-	if err := enc.Encode(s.groups); err != nil {
+	if err := enc.Encode(s.group); err != nil {
 		return nil, err
 	}
 	if err := enc.Encode(s.clock); err != nil {
@@ -197,7 +197,7 @@ func (s *SGM) Dump() ([]byte, error) {
 func (s *SGM) Load(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	dec := gob.NewDecoder(r)
-	if err := dec.Decode(&s.groups); err != nil {
+	if err := dec.Decode(&s.group); err != nil {
 		return err
 	}
 	if err := dec.Decode(&s.clock); err != nil {
@@ -229,7 +229,7 @@ func (s *SGHash) Init(replicas int, fn HashFn) {
 	}
 }
 
-func (s *SGHash) Load(sg SrvGroups) {
+func (s *SGHash) Load(sg SrvGroup) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for tg, tt := range sg {
