@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/heqzha/dcache/pb"
@@ -14,8 +13,7 @@ type CacheServClient struct {
 	cli  pb.CacheServClient
 }
 
-func (c *CacheServClient) NewRPCClient(host string, port int, timeout time.Duration) error {
-	addr := fmt.Sprintf("%s:%d", host, port)
+func (c *CacheServClient) NewRPCClient(addr string, timeout time.Duration) error {
 	conn, err := grpc.Dial(addr, grpc.WithBlock(), grpc.WithTimeout(timeout), grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -61,9 +59,9 @@ func (c *CacheServClient) Unregister(group, addr string) (*pb.UnregisterRes, err
 	})
 }
 
-func (c *CacheServClient) SyncSrvGroups(srvgroups []byte) (*pb.SyncSrvGroupsRes, error) {
-	return c.cli.SyncSrvGroups(context.Background(), &pb.SyncSrvGroupsReq{
-		SrvGroups: srvgroups,
+func (c *CacheServClient) SyncSrvGroup(srvgroup []byte) (*pb.SyncSrvGroupRes, error) {
+	return c.cli.SyncSrvGroup(context.Background(), &pb.SyncSrvGroupReq{
+		SrvGroup: srvgroup,
 	})
 }
 
@@ -76,4 +74,42 @@ func (c *CacheServClient) Ping(group, addr string) (*pb.PingRes, error) {
 
 func (c *CacheServClient) Close() error {
 	return c.conn.Close()
+}
+
+type CSClientPool map[string]*CacheServClient
+
+func (p *CSClientPool) Add(addr string) (*CacheServClient, error) {
+	c, ok := (*p)[addr]
+	if !ok {
+		c = new(CacheServClient)
+		err := c.NewRPCClient(addr, time.Minute)
+		if err != nil {
+			return nil, err
+		}
+		(*p)[addr] = c
+	}
+	return c, nil
+}
+
+func (p *CSClientPool) Get(addr string) (*CacheServClient, error) {
+	c, ok := (*p)[addr]
+	if !ok {
+		return p.Add(addr)
+	}
+	return c, nil
+}
+
+func (p *CSClientPool) Del(addr string) error {
+	c, ok := (*p)[addr]
+	defer func() {
+		delete((*p), addr)
+	}()
+	if ok && c != nil {
+		return c.Close()
+	}
+	return nil
+}
+
+func (p *CSClientPool) Len() int {
+	return len(*p)
 }

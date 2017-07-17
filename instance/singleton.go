@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/heqzha/dcache/core"
+	"github.com/heqzha/dcache/rpc"
 )
 
 // Config instance
@@ -56,4 +57,15 @@ func GetMsgQInst() *core.MessageQueue {
 		msgQInst.Init()
 	})
 	return msgQInst
+}
+
+//RPC client pool instance
+var cliPoolInst *rpc.CSClientPool
+var cliPoolInstOnce sync.Once
+
+func GetCliPoolInst() *rpc.CSClientPool {
+	cliPoolInstOnce.Do(func() {
+		cliPoolInst = new(rpc.CSClientPool)
+	})
+	return cliPoolInst
 }
