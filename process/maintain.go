@@ -29,7 +29,6 @@ func MaintainSvrGroups() error {
 }
 
 func Receive(c *flow.Context) {
-	//TODO Receive event from channel and do some preparations
 	for {
 		msg := sgMsgQ.Pop("srvgroup")
 		if msg == nil {
@@ -42,7 +41,6 @@ func Receive(c *flow.Context) {
 }
 
 func Handle(c *flow.Context) {
-	//TODO Handle event concurrently
 	msg := c.MustGet("msg").(map[string]interface{})
 	c.Set("type", msg["type"])
 	switch msg["type"].(string) {
@@ -88,7 +86,6 @@ func Handle(c *flow.Context) {
 }
 
 func Reload(c *flow.Context) {
-	//TODO reload sghash
 	logger.Info("SGH.Load")
 	sgh.Load(sgm.GetGroup())
 }
