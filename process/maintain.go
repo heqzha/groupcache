@@ -6,16 +6,20 @@ import (
 
 	"github.com/heqzha/dcache/core"
 	"github.com/heqzha/dcache/instance"
+	"github.com/heqzha/dcache/utils"
 	"github.com/heqzha/goutils/flow"
+	"github.com/heqzha/goutils/logger"
 )
 
-var sgMsgQ *core.MessageQueue
 var (
-	fh = flow.FlowNewHandler()
+	fh      = flow.FlowNewHandler()
+	sgMsgQ  = instance.GetMsgQInst()
+	sgm     = instance.GetSGMInst()
+	sgh     = instance.GetSGHInst()
+	cliPool = instance.GetCliPoolInst()
 )
 
 func MaintainSvrGroups() error {
-	sgMsgQ = instance.GetMsgQInst()
 	l, err := fh.NewLine(Receive, Handle, Reload)
 	if err != nil {
 		return err
@@ -44,6 +48,39 @@ func Handle(c *flow.Context) {
 	switch msg["type"].(string) {
 	case "sync":
 		fmt.Println("Handle: sync")
+		dumps, err := sgm.Dump()
+		if err != nil {
+			logger.Error("SGM.Dump", err.Error())
+			return
+		}
+		for gName, tb := range sgm.GetGroup() {
+			for addr := range *tb {
+				if utils.Config.Addr == addr {
+					//Skip current service addr
+					continue
+				}
+				c, err := cliPool.Get(addr)
+				if err != nil {
+					logger.Error(fmt.Sprintf("CSClientPool.Get: %s", addr), err.Error())
+					return
+				}
+				res, err := c.SyncSrvGroup(dumps)
+				if err != nil {
+					logger.Error(fmt.Sprintf("CacheServClient.SyncSrvGroup: %s-%s", gName, addr), err.Error())
+					return
+				}
+				if !res.GetStatus() {
+					logger.Warn(fmt.Sprintf("CacheServClient.SyncSrvGroup: %s-%s", gName, addr), "Response status is false")
+					return
+				}
+				tmpSGM := core.SGM{}
+				tmpSGM.Load(res.GetSrvGroup())
+				logger.Info("SGM.Merge", fmt.Sprintf("Before Merge: %s", sgm.CompareReadable(tmpSGM)))
+				sgm.Merge(tmpSGM)
+				logger.Info("SGM.Merge", fmt.Sprintf("After Merge: %s", sgm.CompareReadable(tmpSGM)))
+				sgm.UpdateTimestamp(gName, addr)
+			}
+		}
 		c.Next()
 	case "ping":
 		fmt.Println("Handle: ping")
@@ -52,5 +89,6 @@ func Handle(c *flow.Context) {
 
 func Reload(c *flow.Context) {
 	//TODO reload sghash
-	fmt.Println("Reload", c.MustGet("type"))
+	logger.Info("SGH.Load")
+	sgh.Load(sgm.GetGroup())
 }
