@@ -57,7 +57,7 @@ func (s *DCacheService) Unregister(ctx context.Context, in *pb.UnregisterReq) (*
 	return nil, nil
 }
 
-func (s *DCacheService) SyncSrvGroups(ctx context.Context, in *pb.SyncSrvGroupsReq) (*pb.SyncSrvGroupsRes, error) {
+func (s *DCacheService) SyncSrvGroup(ctx context.Context, in *pb.SyncSrvGroupReq) (*pb.SyncSrvGroupRes, error) {
 	return nil, nil
 }
 

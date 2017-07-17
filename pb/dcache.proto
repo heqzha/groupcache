@@ -60,14 +60,14 @@ message UnregisterRes{
     bool status=1;
 }
 
-message SyncSrvGroupsReq{
-    bytes srv_groups=1;
+message SyncSrvGroupReq{
+    bytes srv_group=1;
 }
 
-message SyncSrvGroupsRes{
+message SyncSrvGroupRes{
     bool status=1;
     int32 condition=2;
-    bytes srv_groups=3;
+    bytes srv_group=3;
 }
 
 message PingReq{
@@ -86,7 +86,7 @@ service CacheServ{
 
     rpc Register(RegisterReq) returns (RegisterRes) {}
     rpc Unregister(UnregisterReq) returns (UnregisterRes) {}  
-    rpc SyncSrvGroups(SyncSrvGroupsReq) returns (SyncSrvGroupsRes) {}
+    rpc SyncSrvGroup(SyncSrvGroupReq) returns (SyncSrvGroupRes) {}
     rpc Ping(PingReq) returns (PingRes) {}
 }
 
