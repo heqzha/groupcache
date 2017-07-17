@@ -26,7 +26,7 @@ func GetSGMInst() *core.SGM {
 	conf := GetConfInst()
 	sgmInstOnce.Do(func() {
 		if conf.Addr == "" {
-			panic("missing addr in config.yaml")
+			panic("missing addr in config.yml")
 		}
 		sgmInst = new(core.SGM)
 		sgmInst.Init(conf.Addr)
