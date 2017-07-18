@@ -1,4 +1,4 @@
-package instance
+package utils
 
 import (
 	"sync"
@@ -8,12 +8,12 @@ import (
 )
 
 // Config instance
-var confInst *core.Config
+var confInst *Config
 var confInstOnce sync.Once
 
-func GetConfInst() *core.Config {
+func GetConfInst() *Config {
 	confInstOnce.Do(func() {
-		confInst = new(core.Config)
+		confInst = new(Config)
 		confInst.Init()
 	})
 	return confInst

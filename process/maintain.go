@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/heqzha/dcache/core"
-	"github.com/heqzha/dcache/instance"
 	"github.com/heqzha/dcache/utils"
 	"github.com/heqzha/goutils/flow"
 	"github.com/heqzha/goutils/logger"
@@ -13,10 +12,11 @@ import (
 
 var (
 	fh      = flow.FlowNewHandler()
-	sgMsgQ  = instance.GetMsgQInst()
-	sgm     = instance.GetSGMInst()
-	sgh     = instance.GetSGHInst()
-	cliPool = instance.GetCliPoolInst()
+	conf    = utils.GetConfInst()
+	msgQ    = utils.GetMsgQInst()
+	sgm     = utils.GetSGMInst()
+	sgh     = utils.GetSGHInst()
+	cliPool = utils.GetCliPoolInst()
 )
 
 func MaintainSvrGroups() error {
@@ -30,7 +30,7 @@ func MaintainSvrGroups() error {
 
 func Receive(c *flow.Context) {
 	for {
-		msg := sgMsgQ.Pop("srvgroup")
+		msg := msgQ.Pop("srvgroup")
 		if msg == nil {
 			time.Sleep(500 * time.Millisecond)
 			continue
@@ -53,7 +53,7 @@ func Handle(c *flow.Context) {
 		}
 		for gName, tb := range sgm.GetGroup() {
 			for addr := range *tb {
-				if utils.Config.Addr == addr {
+				if conf.Addr == addr {
 					//Skip current service addr
 					continue
 				}
@@ -86,6 +86,6 @@ func Handle(c *flow.Context) {
 }
 
 func Reload(c *flow.Context) {
-	logger.Info("SGH.Load")
+	logger.Info("SGH.Load", "Reload group")
 	sgh.Load(sgm.GetGroup())
 }
