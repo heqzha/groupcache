@@ -77,6 +77,7 @@ message PingReq{
 
 message PingRes{
     bool status=1;
+    bytes srv_group=2;
 }
 
 service CacheServ{

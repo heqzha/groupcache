@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	conf *utils.Config
+	conf    *utils.Config
+	cliPool = utils.GetCliPoolInst()
 )
 
 func init() {
@@ -41,6 +42,20 @@ func main() {
 	pid := CreatePID("dcache")
 	process.MaintainSvrGroups()
 	defer process.StopAll()
+
+	if !conf.IsRoot {
+		root, err := cliPool.Add(conf.RootAddr)
+		if err != nil {
+			panic(fmt.Sprintf("failed to connect root node: %s", err.Error()))
+		}
+		res, err := root.Register(conf.LocalGroup, conf.LocalAddr)
+		if err != nil {
+			panic(fmt.Sprintf("failed to register to root node: %s", err.Error()))
+		} else if !res.GetStatus() {
+			panic(fmt.Sprintf("register denied"))
+		}
+	}
+
 	fmt.Printf("Start to Serving :%d with pid %d\n", conf.ServPort, pid)
 	rpcserv.Run(conf.ServPort)
 }

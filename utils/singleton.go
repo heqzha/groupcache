@@ -26,11 +26,11 @@ var sgmInstOnce sync.Once
 func GetSGMInst() *core.SGM {
 	conf := GetConfInst()
 	sgmInstOnce.Do(func() {
-		if conf.Addr == "" {
+		if conf.LocalAddr == "" {
 			panic("missing addr in config.yml")
 		}
 		sgmInst = new(core.SGM)
-		sgmInst.Init(conf.Addr)
+		sgmInst.Init(conf.LocalGroup, conf.LocalAddr)
 	})
 	return sgmInst
 }

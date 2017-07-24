@@ -57,7 +57,7 @@ func Handle(c *flow.Context) {
 		}
 		for gName, tb := range sgm.GetGroup() {
 			for addr := range *tb {
-				if conf.Addr == addr {
+				if conf.LocalAddr == addr {
 					//Skip current service addr
 					continue
 				}

@@ -38,77 +38,93 @@ func (st *SrvTable) String() string {
 
 type SrvGroup map[string]*SrvTable
 
-func (s *SrvGroup) NewGroup(group string) *SrvTable {
+func (s *SrvGroup) NewGroup(group string) (*SrvTable, error) {
 	if group == "" {
-		panic("missing group name")
+		return nil, fmt.Errorf("SrvGroup.NewGroup: %s", "missing group name")
 	}
 	(*s)[group] = &SrvTable{}
-	return (*s)[group]
+	return (*s)[group], nil
 }
 
-func (s *SrvGroup) GetTable(group string) *SrvTable {
+func (s *SrvGroup) GetTable(group string) (*SrvTable, error) {
 	if group == "" {
-		panic("missing group name")
+		return nil, fmt.Errorf("SrvGroup.GetTable: %s", "missing group name")
 	}
 	table, ok := (*s)[group]
 	if ok && table != nil {
-		return table
+		return table, nil
 	}
 	return s.NewGroup(group)
 }
 
-func (s *SrvGroup) SetTable(group string, table *SrvTable) {
+func (s *SrvGroup) SetTable(group string, table *SrvTable) error {
 	if group == "" {
-		panic("missing group name")
+		return fmt.Errorf("SrvGroup.SetTable: %s", "missing group name")
 	}
 	(*s)[group] = table
+	return nil
 }
 
 type SGM struct {
-	myAddr string
-	group  SrvGroup
-	clock  VClock
-	mutex  *sync.RWMutex
+	localGroup string
+	localAddr  string
+	group      SrvGroup
+	clock      VClock
+	mutex      *sync.RWMutex
 }
 
-func (s *SGM) Init(myAddr string) {
-	s.myAddr = myAddr
+func (s *SGM) Init(localGroup, localAddr string) {
+	s.localGroup = localGroup
+	s.localAddr = localAddr
 	s.group = SrvGroup{}
 	s.clock = VClock{}
 	s.mutex = &sync.RWMutex{}
+	s.Register(localGroup, localAddr)
 }
 
-func (s *SGM) Register(group string, addrs ...string) {
+func (s *SGM) Register(group string, addrs ...string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.group.GetTable(group)
+	table, err := s.group.GetTable(group)
+	if err != nil {
+		return err
+	}
 	for _, addr := range addrs {
 		(*table)[addr] = time.Now().Unix()
 	}
 
-	s.clock.Tick(s.myAddr)
+	s.clock.Tick(s.localAddr)
+	return nil
 }
 
-func (s *SGM) Unregister(group, addr string) {
+func (s *SGM) Unregister(group, addr string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.group.GetTable(group)
+	table, err := s.group.GetTable(group)
+	if err != nil {
+		return err
+	}
 	_, eixst := (*table)[addr]
 	if eixst {
 		delete((*table), addr)
 	}
-	s.clock.Tick(s.myAddr)
+	s.clock.Tick(s.localAddr)
+	return nil
 }
 
-func (s *SGM) UpdateTimestamp(group, addr string) {
+func (s *SGM) UpdateTimestamp(group, addr string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	table := s.group.GetTable(group)
+	table, err := s.group.GetTable(group)
+	if err != nil {
+		return err
+	}
 	_, eixst := (*table)[addr]
 	if eixst {
 		(*table)[addr] = time.Now().Unix()
 	}
-	s.clock.Tick(s.myAddr)
+	s.clock.Tick(s.localAddr)
+	return nil
 }
 
 func (s *SGM) GetGroupNames() []string {
@@ -119,7 +135,7 @@ func (s *SGM) GetGroupNames() []string {
 	return group
 }
 
-func (s *SGM) Merge(as SGM) Condition {
+func (s *SGM) Merge(as SGM) (Condition, error) {
 	s.mutex.Lock()
 	defer func() {
 		s.clock.Merge(as.clock)
@@ -127,26 +143,29 @@ func (s *SGM) Merge(as SGM) Condition {
 	}()
 	if s.clock.Compare(as.clock, Equal) {
 		//s and as are equal
-		return Equal
+		return Equal, nil
 	} else if s.clock.Compare(as.clock, Concurrent) {
 		//s and as are concurrent
 		for tg, tt := range as.group {
-			st := s.group.GetTable(tg)
+			st, err := s.group.GetTable(tg)
+			if err != nil {
+				return Condition(-1), err
+			}
 			st.Add((*tt))
 		}
-		return Concurrent
+		return Concurrent, nil
 	} else if s.clock.Compare(as.clock, Descendant) {
 		//s is older than as
 		for tg, tt := range as.group {
 			ttc := tt.Clone()
 			s.group.SetTable(tg, &ttc)
 		}
-		return Descendant
+		return Descendant, nil
 	} else if s.clock.Compare(as.clock, Ancestor) {
 		//s is newer than t
-		return Ancestor
+		return Ancestor, nil
 	}
-	return Condition(-1)
+	return Condition(-1), nil
 }
 
 func (s *SGM) CompareReadable(as SGM) string {
@@ -164,7 +183,7 @@ func (s *SGM) CompareReadable(as SGM) string {
 	return "Unknown"
 }
 
-func (s *SGM) GetTable(group string) *SrvTable {
+func (s *SGM) GetTable(group string) (*SrvTable, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.group.GetTable(group)

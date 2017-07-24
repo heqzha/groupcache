@@ -81,5 +81,12 @@ func (s *DCacheService) SyncSrvGroup(ctx context.Context, in *pb.SyncSrvGroupReq
 }
 
 func (s *DCacheService) Ping(ctx context.Context, in *pb.PingReq) (*pb.PingRes, error) {
-	return nil, nil
+	srvGroup, err := handler.Ping(in.GetGroup(), in.GetAddr())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.PingRes{
+		Status:   true,
+		SrvGroup: srvGroup,
+	}, nil
 }
