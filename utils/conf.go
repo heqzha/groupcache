@@ -12,12 +12,13 @@ import (
 )
 
 type Config struct {
-	ServPort  int    `yaml:"serv_port"`
-	Debug     bool   `yaml:"debug"`
-	LogDir    string `yaml:"log_dir"`
-	IsRoot    bool   `yaml:"is_root"`
-	RootAddr  string `yaml:"root_addr"`
-	LocalAddr string `yaml:"local_addr"`
+	ServPort   int    `yaml:"serv_port"`
+	Debug      bool   `yaml:"debug"`
+	LogDir     string `yaml:"log_dir"`
+	IsRoot     bool   `yaml:"is_root"`
+	RootAddr   string `yaml:"root_addr"`
+	LocalGroup string `yaml:"local_group"`
+	LocalAddr  string `yaml:"local_addr"`
 }
 
 func (c *Config) Init() {
