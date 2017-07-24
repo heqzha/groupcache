@@ -78,31 +78,30 @@ func (c *CacheServClient) Close() error {
 
 type CSClientPool map[string]*CacheServClient
 
-func (p *CSClientPool) Add(addr string) (*CacheServClient, error) {
-	c, ok := (*p)[addr]
+func (p CSClientPool) Add(addr string) (*CacheServClient, error) {
+	_, ok := p[addr]
 	if !ok {
-		c = new(CacheServClient)
-		err := c.NewRPCClient(addr, time.Minute)
+		p[addr] = new(CacheServClient)
+		err := p[addr].NewRPCClient(addr, time.Minute)
 		if err != nil {
 			return nil, err
 		}
-		(*p)[addr] = c
 	}
-	return c, nil
+	return p[addr], nil
 }
 
-func (p *CSClientPool) Get(addr string) (*CacheServClient, error) {
-	c, ok := (*p)[addr]
+func (p CSClientPool) Get(addr string) (*CacheServClient, error) {
+	_, ok := p[addr]
 	if !ok {
 		return p.Add(addr)
 	}
-	return c, nil
+	return p[addr], nil
 }
 
-func (p *CSClientPool) Del(addr string) error {
-	c, ok := (*p)[addr]
+func (p CSClientPool) Del(addr string) error {
+	c, ok := p[addr]
 	defer func() {
-		delete((*p), addr)
+		delete(p, addr)
 	}()
 	if ok && c != nil {
 		return c.Close()
@@ -110,6 +109,6 @@ func (p *CSClientPool) Del(addr string) error {
 	return nil
 }
 
-func (p *CSClientPool) Len() int {
-	return len(*p)
+func (p CSClientPool) Len() int {
+	return len(p)
 }

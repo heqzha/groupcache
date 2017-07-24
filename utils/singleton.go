@@ -60,12 +60,12 @@ func GetMsgQInst() *core.MessageQueue {
 }
 
 //RPC client pool instance
-var cliPoolInst *rpccli.CSClientPool
+var cliPoolInst rpccli.CSClientPool
 var cliPoolInstOnce sync.Once
 
-func GetCliPoolInst() *rpccli.CSClientPool {
+func GetCliPoolInst() rpccli.CSClientPool {
 	cliPoolInstOnce.Do(func() {
-		cliPoolInst = new(rpccli.CSClientPool)
+		cliPoolInst = make(rpccli.CSClientPool)
 	})
 	return cliPoolInst
 }
