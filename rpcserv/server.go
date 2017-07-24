@@ -1,4 +1,4 @@
-package rpc
+package rpcserv
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/heqzha/dcache/pb"
+	"github.com/heqzha/dcache/rpcserv/handler"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
@@ -24,7 +25,7 @@ func runRPCServer(port int, register func(*grpc.Server, ...interface{}), service
 	grpcServer.Serve(lis)
 }
 
-func RunRPCServer(port int) {
+func Run(port int) {
 	runRPCServer(port, func(grpc *grpc.Server, services ...interface{}) {
 		for _, s := range services {
 			switch s.(type) {
@@ -50,15 +51,33 @@ func (s *DCacheService) Del(ctx context.Context, in *pb.DelReq) (*pb.DelRes, err
 }
 
 func (s *DCacheService) Register(ctx context.Context, in *pb.RegisterReq) (*pb.RegisterRes, error) {
-	return nil, nil
+	if err := handler.Register(in.GetGroup(), in.GetAddr()); err != nil {
+		return nil, err
+	}
+	return &pb.RegisterRes{
+		Status: true,
+	}, nil
 }
 
 func (s *DCacheService) Unregister(ctx context.Context, in *pb.UnregisterReq) (*pb.UnregisterRes, error) {
-	return nil, nil
+	if err := handler.Unregister(in.GetGroup(), in.GetAddr()); err != nil {
+		return nil, err
+	}
+	return &pb.UnregisterRes{
+		Status: true,
+	}, nil
 }
 
 func (s *DCacheService) SyncSrvGroup(ctx context.Context, in *pb.SyncSrvGroupReq) (*pb.SyncSrvGroupRes, error) {
-	return nil, nil
+	cond, srvGroup, err := handler.SyncSrvGroups(in.GetSrvGroup())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SyncSrvGroupRes{
+		Status:    true,
+		Condition: int32(cond),
+		SrvGroup:  srvGroup,
+	}, nil
 }
 
 func (s *DCacheService) Ping(ctx context.Context, in *pb.PingReq) (*pb.PingRes, error) {

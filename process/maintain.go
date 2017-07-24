@@ -28,6 +28,10 @@ func MaintainSvrGroups() error {
 	return nil
 }
 
+func StopAll() error {
+	return fh.Destory()
+}
+
 func Receive(c *flow.Context) {
 	for {
 		msg := msgQ.Pop("srvgroup")

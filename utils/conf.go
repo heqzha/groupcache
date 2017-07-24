@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	ServPort int    `yaml:"serv_port"`
 	Debug    bool   `yaml:"debug"`
 	Addr     string `yaml:"addr"`
 	RootAddr string `yaml:"root_addr"`

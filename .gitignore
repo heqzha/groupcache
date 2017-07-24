@@ -1,1 +1,6 @@
 *~
+
+*.pid
+serv_inst/
+dcache
+*.log.*
