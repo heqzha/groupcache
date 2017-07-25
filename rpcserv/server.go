@@ -39,14 +39,17 @@ func Run(port int) {
 type DCacheService struct{}
 
 func (s *DCacheService) Get(ctx context.Context, in *pb.GetReq) (*pb.GetRes, error) {
+	//TODO
 	return nil, nil
 }
 
 func (s *DCacheService) Set(ctx context.Context, in *pb.SetReq) (*pb.SetRes, error) {
+	//TODO
 	return nil, nil
 }
 
 func (s *DCacheService) Del(ctx context.Context, in *pb.DelReq) (*pb.DelRes, error) {
+	//TODO
 	return nil, nil
 }
 

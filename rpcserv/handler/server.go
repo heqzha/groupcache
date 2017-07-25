@@ -13,6 +13,21 @@ var (
 	msgQ = utils.GetMsgQInst()
 )
 
+func Set(group, key string, value []byte) error {
+	//TODO
+	return nil
+}
+
+func Get(group, key string) ([]byte, error) {
+	//TODO
+	return nil, nil
+}
+
+func Del(group, key string) ([]byte, error) {
+	//TODO
+	return nil, nil
+}
+
 func Register(group, addr string) error {
 	logger.Debug("SGM.Register", fmt.Sprintf("%s: %s", group, addr))
 	if err := sgm.Register(group, addr); err != nil {
