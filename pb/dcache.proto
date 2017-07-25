@@ -17,7 +17,6 @@ message GetReq{
 message GetRes{
     bool status=1;
     bytes value = 2;
-    Stat stat=3;
 }
 
 message SetReq {
@@ -28,7 +27,6 @@ message SetReq {
 
 message SetRes {
     bool status = 1;
-    Stat stat=2;
 }
 
 message DelReq {
@@ -39,7 +37,6 @@ message DelReq {
 message DelRes {
     bool status = 1;
     bytes value = 2;
-    Stat stat=3;
 }
 
 message RegisterReq{
