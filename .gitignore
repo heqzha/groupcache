@@ -4,3 +4,4 @@
 serv_inst/
 dcache
 *.log.*
+standalone/standalone
