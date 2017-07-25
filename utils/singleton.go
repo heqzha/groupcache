@@ -3,6 +3,7 @@ package utils
 import (
 	"sync"
 
+	"github.com/bluele/gcache"
 	"github.com/heqzha/dcache/core"
 	"github.com/heqzha/dcache/rpccli"
 )
@@ -68,4 +69,23 @@ func GetCliPoolInst() rpccli.CSClientPool {
 		cliPoolInst = make(rpccli.CSClientPool)
 	})
 	return cliPoolInst
+}
+
+//Cache instance
+var cacheInst *gcache.Cache
+var cacheInstOnce sync.Once
+
+func GetCacheInst() *gcache.Cache {
+	cacheInstOnce.Do(func() {
+		c := gcache.New(1024).LFU().AddedFunc(func(key, value interface{}) {
+			//TODO
+		}).LoaderFunc(func(key interface{}) (interface{}, error) {
+			//TODO
+			return nil, nil
+		}).EvictedFunc(func(key, value interface{}) {
+			//TODO
+		}).Build()
+		cacheInst = &c
+	})
+	return cacheInst
 }
